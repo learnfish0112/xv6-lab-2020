@@ -5,8 +5,8 @@ kernel/kernel：     文件格式 elf64-littleriscv
 Disassembly of section .text:
 
 0000000080000000 <_entry>:
-    80000000:	0000a117          	auipc	sp,0xa
-    80000004:	83010113          	addi	sp,sp,-2000 # 80009830 <stack0>
+    80000000:	00009117          	auipc	sp,0x9
+    80000004:	86013103          	ld	sp,-1952(sp) # 80008860 <_GLOBAL_OFFSET_TABLE_+0x8>
     80000008:	6505                	lui	a0,0x1
     8000000a:	f14025f3          	csrr	a1,mhartid
     8000000e:	0585                	addi	a1,a1,1
