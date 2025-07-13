@@ -1,34 +1,69 @@
 #include "kernel/types.h"
 #include "kernel/stat.h"
+#include "user/user.h"
 #include "kernel/param.h"
-#include "user.h"
 
-int main(int argc, char* argv[])
-{
-    if(argc < 2) {
-        fprintf(2, "xargs Usage: transpara_cmd [argvs]\n");
-        exit(1);
-    }
-
-    char* transfer_argv[MAXARG];
-    for(int i = 1; i < argc; i++) {
-        transfer_argv[i - 1] = malloc(strlen(argv[i]) + 1);
-        strcpy(transfer_argv[i - 1], argv[i]);
-        printf("transfer_argv[%d] = %s\n", i - 1, transfer_argv[i - 1]);
-        //current cannot read sh script arg: ., it exist in stdin
-    }
-
-    if(fork() == 0) {
-        /*child*/
-        exec(argv[1], transfer_argv); 
-        fprintf(2, "exec failed\n");
-        exit(1);
-    } else {    
-        int ret = 0;
-        ret = wait(0);
-        printf("child return %d\n", ret);
-        printf("should never seen before grep over\n");
-    }
-    return 0;
+int readline(char *new_argv[32], int curr_argc){
+	char buf[1024];
+	int n = 0;
+	while(read(0, buf+n, 1)){
+		if (n == 1023)
+		{
+			fprintf(2, "argument is too long\n");
+			exit(1);
+		}
+		if (buf[n] == '\n')
+		{
+			break;
+		}
+		n++;
+	}
+	buf[n] = 0;
+    /* you can read what? */
+    /* In xargstest.sh, you can accept find res as arguments*/
+    /* printf("buf = %s\n", buf); */
+	if (n == 0)return 0;
+	int offset = 0;
+	while(offset < n){
+		new_argv[curr_argc++] = buf + offset;
+		while(buf[offset] != ' ' && offset < n){
+			offset++;
+		}
+		while(buf[offset] == ' ' && offset < n){
+			buf[offset++] = 0;
+		}
+	}
+	return curr_argc;
 }
 
+int main(int argc, char const *argv[])
+{
+	if (argc <= 1)
+	{
+		fprintf(2, "Usage: xargs command (arg ...)\n");
+		exit(1);
+	}
+	char *command = malloc(strlen(argv[1]) + 1);
+	char *new_argv[MAXARG];
+	strcpy(command, argv[1]);
+	for (int i = 1; i < argc; ++i)
+	{
+		new_argv[i - 1] = malloc(strlen(argv[i]) + 1);
+		strcpy(new_argv[i - 1], argv[i]);
+        /* printf("new_argv[%d] = %s", i - 1, argv[i]); */
+	}
+
+	int curr_argc;
+	while((curr_argc = readline(new_argv, argc - 1)) != 0)
+	{
+        /* printf("curr_argc = %d\n", curr_argc); */
+		new_argv[curr_argc] = 0;
+		if(fork() == 0){
+			exec(command, new_argv);
+			fprintf(2, "exec failed\n");
+			exit(1);
+		}
+		wait(0);
+	}
+	exit(0);
+}
